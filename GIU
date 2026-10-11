@@ -4,34 +4,6 @@ Library.__index = Library
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
-local Theme = {
-    Background = Color3.fromRGB(10, 10, 10),
-    TitleBar = Color3.fromRGB(12, 12, 12),
-    TabBar = Color3.fromRGB(16, 16, 16),
-    TabIdle = Color3.fromRGB(30, 30, 30),
-    TabActive = Color3.fromRGB(60, 60, 80),
-    Text = Color3.fromRGB(255, 255, 255),
-    Muted = Color3.fromRGB(180, 180, 180),
-    Element = Color3.fromRGB(70, 70, 70),
-    On = Color3.fromRGB(40, 160, 40),
-    Off = Color3.fromRGB(70, 70, 70),
-    Red = Color3.fromRGB(180, 40, 40),
-    Blue = Color3.fromRGB(40, 90, 150),
-    Purple = Color3.fromRGB(80, 50, 140),
-    Label = Color3.fromRGB(255, 200, 100),
-}
-
-local function create(className, props, parent)
-    local obj = Instance.new(className)
-    for k, v in pairs(props or {}) do obj[k] = v end
-    obj.Parent = parent
-    return obj
-end
-
-local function corner(parent, radius)
-    return create("UICorner", { CornerRadius = UDim.new(0, radius or 5) }, parent)
-end
-
 local function getUIParent()
     if gethui then return gethui() end
     local ok, cg = pcall(function() return game:GetService("CoreGui") end)
@@ -42,109 +14,122 @@ end
 function Library.new()
     local self = setmetatable({}, Library)
     self.Windows = {}
-    self.Theme = Theme
     return self
 end
 
 function Library:CreateWindow(config)
     config = config or {}
-    local theme = self.Theme
     local parent = config.Parent or getUIParent()
-    local name = config.Name or "LibraryGUI"
+    local name = config.Name or "UltimateGunAutomationGUI"
 
     if parent:FindFirstChild(name) then
         parent:FindFirstChild(name):Destroy()
     end
 
-    local screenGui = create("ScreenGui", {
-        Name = name,
-        ResetOnSpawn = false,
-    }, parent)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = name
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = parent
 
-    local mainFrame = create("Frame", {
-        Size = config.Size or UDim2.new(0, 210, 0, 260),
-        Position = config.Position or UDim2.new(1, -230, 0, 20),
-        BackgroundColor3 = theme.Background,
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        Active = true,
-        Draggable = true,
-        ClipsDescendants = true,
-    }, screenGui)
-    corner(mainFrame, 8)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = config.Size or UDim2.new(0, 210, 0, 260)
+    mainFrame.Position = config.Position or UDim2.new(1, -230, 0, 20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    mainFrame.BackgroundTransparency = 0
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.ClipsDescendants = true
+    mainFrame.Parent = screenGui
 
-    local titleBar = create("Frame", {
-        Size = UDim2.new(1, 0, 0, 22),
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundColor3 = theme.TitleBar,
-        BorderSizePixel = 0,
-    }, mainFrame)
-    corner(titleBar, 8)
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 8)
+    mainCorner.Parent = mainFrame
 
-    local title = create("TextLabel", {
-        Size = UDim2.new(1, -45, 1, 0),
-        Position = UDim2.new(0, 4, 0, 0),
-        BackgroundTransparency = 1,
-        Text = config.Title or "Library",
-        TextColor3 = theme.Text,
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, titleBar)
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 22)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = mainFrame
 
-    local minimizeBtn = create("TextButton", {
-        Size = UDim2.new(0, 20, 0, 20),
-        Position = UDim2.new(1, -42, 0, 1),
-        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-        Text = "-",
-        TextColor3 = theme.Text,
-    }, titleBar)
-    corner(minimizeBtn, 5)
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.Parent = titleBar
 
-    local closeBtn = create("TextButton", {
-        Size = UDim2.new(0, 20, 0, 20),
-        Position = UDim2.new(1, -21, 0, 1),
-        BackgroundColor3 = theme.Red,
-        Text = "X",
-        TextColor3 = theme.Text,
-    }, titleBar)
-    corner(closeBtn, 5)
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -45, 1, 0)
+    title.Position = UDim2.new(0, 4, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = config.Title or "枪械自动化全能辅助"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 11
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = titleBar
 
-    local tabBar = create("ScrollingFrame", {
-        Size = UDim2.new(1, 0, 0, 21),
-        Position = UDim2.new(0, 0, 0, 21),
-        BackgroundColor3 = theme.TabBar,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110),
-        ScrollBarImageTransparency = 0.4,
-        ScrollingDirection = Enum.ScrollingDirection.X,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.X,
-        ElasticBehavior = Enum.ElasticBehavior.Never,
-    }, mainFrame)
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+    minimizeBtn.Position = UDim2.new(1, -42, 0, 1)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    minimizeBtn.Text = "-"
+    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeBtn.Parent = titleBar
 
-    create("UIListLayout", {
-        FillDirection = Enum.FillDirection.Horizontal,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 0),
-    }, tabBar)
+    local minimizeCorner = Instance.new("UICorner")
+    minimizeCorner.CornerRadius = UDim.new(0, 5)
+    minimizeCorner.Parent = minimizeBtn
 
-    local smallIcon = create("TextButton", {
-        Size = UDim2.new(0, 32, 0, 32),
-        Position = UDim2.new(1, -45, 0, 20),
-        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-        BackgroundTransparency = 0.2,
-        Text = "Gun",
-        TextColor3 = theme.Text,
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 10,
-        BorderSizePixel = 0,
-        Active = true,
-        Draggable = true,
-        Visible = false,
-    }, screenGui)
-    corner(smallIcon, 6)
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 20, 0, 20)
+    closeBtn.Position = UDim2.new(1, -21, 0, 1)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Parent = titleBar
+
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 5)
+    closeCorner.Parent = closeBtn
+
+    local tabBar = Instance.new("ScrollingFrame")
+    tabBar.Size = UDim2.new(1, 0, 0, 21)
+    tabBar.Position = UDim2.new(0, 0, 0, 21)
+    tabBar.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    tabBar.BorderSizePixel = 0
+    tabBar.ScrollBarThickness = 2
+    tabBar.ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110)
+    tabBar.ScrollBarImageTransparency = 0.4
+    tabBar.ScrollingDirection = Enum.ScrollingDirection.X
+    tabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
+    tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+    tabBar.ElasticBehavior = Enum.ElasticBehavior.Never
+    tabBar.Parent = mainFrame
+
+    local tabListLayout = Instance.new("UIListLayout")
+    tabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabListLayout.Padding = UDim.new(0, 0)
+    tabListLayout.Parent = tabBar
+
+    local smallIcon = Instance.new("TextButton")
+    smallIcon.Size = UDim2.new(0, 32, 0, 32)
+    smallIcon.Position = UDim2.new(1, -45, 0, 20)
+    smallIcon.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    smallIcon.BackgroundTransparency = 0.2
+    smallIcon.Text = "Gun"
+    smallIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    smallIcon.Font = Enum.Font.SourceSansBold
+    smallIcon.TextSize = 10
+    smallIcon.BorderSizePixel = 0
+    smallIcon.Active = true
+    smallIcon.Draggable = true
+    smallIcon.Visible = false
+    smallIcon.Parent = screenGui
+
+    local iconCorner = Instance.new("UICorner")
+    iconCorner.CornerRadius = UDim.new(0, 6)
+    iconCorner.Parent = smallIcon
 
     minimizeBtn.MouseButton1Click:Connect(function()
         mainFrame.Visible = false
@@ -164,169 +149,163 @@ function Library:CreateWindow(config)
         ScreenGui = screenGui,
         Main = mainFrame,
         TabBar = tabBar,
-        Tabs = {},
-        CurrentTab = nil,
-        Theme = theme,
+        Pages = {},
+        CurrentTabBtn = nil,
     }
 
+    local TAB_WIDTH = 70
+
     function window:AddTab(tabName)
-        local index = #self.Tabs + 1
-        local TAB_WIDTH = 70
+        local index = #self.Pages + 1
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, TAB_WIDTH, 1, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        btn.Text = tostring(tabName)
+        btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        btn.Font = Enum.Font.SourceSansBold
+        btn.TextSize = 11
+        btn.BorderSizePixel = 0
+        btn.LayoutOrder = index
+        btn.Parent = self.TabBar
 
-        local btn = create("TextButton", {
-            Size = UDim2.new(0, TAB_WIDTH, 1, 0),
-            BackgroundColor3 = theme.TabIdle,
-            Text = tostring(tabName),
-            TextColor3 = theme.Muted,
-            Font = Enum.Font.SourceSansBold,
-            TextSize = 11,
-            BorderSizePixel = 0,
-            LayoutOrder = index,
-        }, self.TabBar)
+        local sf = Instance.new("ScrollingFrame")
+        sf.Size = UDim2.new(1, 0, 1, -42)
+        sf.Position = UDim2.new(0, 0, 0, 42)
+        sf.BackgroundTransparency = 1
+        sf.BorderSizePixel = 0
+        sf.ScrollBarThickness = 3
+        sf.ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110)
+        sf.CanvasSize = UDim2.new(0, 0, 0, 0)
+        sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        sf.Visible = false
+        sf.Parent = self.Main
 
-        local page = create("ScrollingFrame", {
-            Size = UDim2.new(1, 0, 1, -42),
-            Position = UDim2.new(0, 0, 0, 42),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ScrollBarThickness = 3,
-            ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110),
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            Visible = false,
-        }, self.Main)
-
-        local layout = create("UIListLayout", {
-            Padding = UDim.new(0, 2),
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, page)
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 2)
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = sf
 
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+            sf.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
         end)
 
         btn.MouseButton1Click:Connect(function()
-            for _, t in ipairs(self.Tabs) do
-                t.Page.Visible = false
-                t.Button.BackgroundColor3 = theme.TabIdle
-                t.Button.TextColor3 = theme.Muted
+            for _, p in ipairs(self.Pages) do p.Scroll.Visible = false end
+            sf.Visible = true
+            if self.CurrentTabBtn then
+                self.CurrentTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                self.CurrentTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
             end
-            page.Visible = true
-            btn.BackgroundColor3 = theme.TabActive
-            btn.TextColor3 = theme.Text
-            self.CurrentTab = tab
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            self.CurrentTabBtn = btn
 
             local targetX = (index - 1) * TAB_WIDTH
-            local maxScroll = math.max(0, #self.Tabs * TAB_WIDTH - self.TabBar.AbsoluteSize.X)
+            local maxScroll = math.max(0, #self.Pages * TAB_WIDTH - self.TabBar.AbsoluteSize.X)
             self.TabBar.CanvasPosition = Vector2.new(math.clamp(targetX, 0, maxScroll), 0)
         end)
 
         local tab = {
             Window = self,
-            Name = tostring(tabName),
             Button = btn,
-            Page = page,
+            Scroll = sf,
             Layout = layout,
             NextOrder = 1,
         }
 
-        local function newRow(height)
-            local f = create("Frame", {
-                Size = UDim2.new(1, -6, 0, height or 22),
-                BackgroundTransparency = 1,
-                LayoutOrder = tab.NextOrder,
-            }, page)
+        local function newItem(name, height)
+            local f = Instance.new("Frame")
+            f.Name = name
+            f.Size = UDim2.new(1, -6, 0, height)
+            f.BackgroundTransparency = 1
+            f.LayoutOrder = tab.NextOrder
+            f.Parent = sf
             tab.NextOrder = tab.NextOrder + 1
             return f
         end
 
-        function tab:AddLabel(text, color, textSize, height)
-            local row = newRow(height or 16)
-            return create("TextLabel", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = tostring(text),
-                TextColor3 = color or theme.Label,
-                Font = Enum.Font.SourceSans,
-                TextSize = textSize or 10,
-                TextXAlignment = Enum.TextXAlignment.Left,
-            }, row)
-        end
-
-        function tab:AddToggle(id, config)
-            config = config or {}
-            local row = newRow(22)
-            local btn = create("TextButton", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = config.Default and theme.On or (config.OffColor or theme.Off),
-                Text = (config.Text or id) .. ": " .. (config.Default and "开启" or "关闭"),
-                TextColor3 = theme.Text,
-                Font = Enum.Font.SourceSansBold,
-                TextSize = 11,
-            }, row)
-            corner(btn, 4)
-
-            local control = { Value = config.Default == true, Callback = config.Callback }
-            local onColor = config.OnColor or theme.On
-            local offColor = config.OffColor or theme.Off
-
-            local function set(value, fire)
-                control.Value = value == true
-                btn.BackgroundColor3 = control.Value and onColor or offColor
-                btn.Text = (config.Text or id) .. ": " .. (control.Value and "开启" or "关闭")
-                if fire and control.Callback then control.Callback(control.Value) end
-            end
-
-            btn.MouseButton1Click:Connect(function()
-                set(not control.Value, true)
+        function tab:AddToggle(id, cfg)
+            cfg = cfg or {}
+            local row = newItem(id, 22)
+            local btn2 = Instance.new("TextButton")
+            btn2.Size = UDim2.new(1, 0, 1, 0)
+            btn2.BackgroundColor3 = cfg.Default and (cfg.OnColor or Color3.fromRGB(40, 160, 40)) or (cfg.OffColor or Color3.fromRGB(70, 70, 70))
+            btn2.Text = (cfg.Text or id) .. ": " .. (cfg.Default and "开启" or "关闭")
+            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn2.Font = Enum.Font.SourceSansBold
+            btn2.TextSize = 11
+            btn2.Parent = row
+            local onColor = cfg.OnColor or Color3.fromRGB(40, 160, 40)
+            local offColor = cfg.OffColor or Color3.fromRGB(70, 70, 70)
+            local state = cfg.Default == true
+            local control = { Value = state, Callback = cfg.Callback }
+            btn2.MouseButton1Click:Connect(function()
+                state = not state
+                control.Value = state
+                btn2.BackgroundColor3 = state and onColor or offColor
+                btn2.Text = (cfg.Text or id) .. ": " .. (state and "开启" or "关闭")
+                if control.Callback then control.Callback(state) end
             end)
-
-            function control:SetValue(v) set(v, true) end
+            function control:SetValue(v)
+                state = v == true
+                self.Value = state
+                btn2.BackgroundColor3 = state and onColor or offColor
+                btn2.Text = (cfg.Text or id) .. ": " .. (state and "开启" or "关闭")
+            end
             function control:OnChanged(cb) self.Callback = cb; return self end
-            set(control.Value, false)
             return control
         end
 
-        function tab:AddButton(id, config)
-            config = config or {}
-            local row = newRow(22)
-            local btn = create("TextButton", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = config.Color or theme.Element,
-                Text = config.Text or id,
-                TextColor3 = theme.Text,
-                Font = Enum.Font.SourceSansBold,
-                TextSize = 11,
-            }, row)
-            corner(btn, 4)
-            local control = { Callback = config.Callback }
-            btn.MouseButton1Click:Connect(function()
-                if config.Func then config.Func() end
+        function tab:AddButton(id, cfg)
+            cfg = cfg or {}
+            local row = newItem(id, 22)
+            local btn2 = Instance.new("TextButton")
+            btn2.Size = UDim2.new(1, 0, 1, 0)
+            btn2.BackgroundColor3 = cfg.Color or Color3.fromRGB(70, 70, 70)
+            btn2.Text = cfg.Text or id
+            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn2.Font = Enum.Font.SourceSansBold
+            btn2.TextSize = 11
+            btn2.Parent = row
+            local control = { Callback = cfg.Callback }
+            btn2.MouseButton1Click:Connect(function()
+                if cfg.Func then cfg.Func() end
                 if control.Callback then control.Callback() end
             end)
             function control:OnClick(cb) self.Callback = cb; return self end
             return control
         end
 
-        function tab:AddInput(id, config)
-            config = config or {}
-            local row = newRow(22)
-            local box = create("TextBox", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-                Text = config.Default or "",
-                PlaceholderText = config.Placeholder or "",
-                TextColor3 = theme.Text,
-                PlaceholderColor3 = Color3.fromRGB(130, 130, 130),
-                Font = Enum.Font.SourceSans,
-                TextSize = 11,
-                ClearTextOnFocus = false,
-            }, row)
-            corner(box, 4)
-            local control = { Object = box, Callback = config.Callback }
+        function tab:AddInput(id, cfg)
+            cfg = cfg or {}
+            local row = newItem(id, 22)
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.6, 0, 1, 0)
+            label.BackgroundTransparency = 1
+            label.Text = cfg.Text or id
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.Font = Enum.Font.SourceSans
+            label.TextSize = 11
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = row
+
+            local box = Instance.new("TextBox")
+            box.Size = UDim2.new(0.4, 0, 1, 0)
+            box.Position = UDim2.new(0.6, 0, 0, 0)
+            box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            box.Text = cfg.Default or ""
+            box.PlaceholderText = cfg.Placeholder or ""
+            box.TextColor3 = Color3.fromRGB(255, 255, 255)
+            box.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
+            box.Font = Enum.Font.SourceSans
+            box.TextSize = 11
+            box.ClearTextOnFocus = false
+            box.Parent = row
+
+            local control = { Object = box, Callback = cfg.Callback }
             box.FocusLost:Connect(function(enter)
-                if config.Callback then config.Callback(box.Text, enter) end
+                if cfg.Callback then cfg.Callback(box.Text, enter) end
                 if control.Callback then control.Callback(box.Text, enter) end
             end)
             function control:GetValue() return box.Text end
@@ -335,79 +314,63 @@ function Library:CreateWindow(config)
             return control
         end
 
-        function tab:AddDropdown(id, config)
-            config = config or {}
-            local values = config.Values or {}
-            local row = newRow(44)
+        function tab:AddDropdown(id, cfg)
+            cfg = cfg or {}
+            local values = cfg.Values or {}
+            local row = newItem(id, 22)
+            local btn2 = Instance.new("TextButton")
+            btn2.Size = UDim2.new(1, 0, 1, 0)
+            btn2.BackgroundColor3 = cfg.Color or Color3.fromRGB(40, 90, 150)
+            btn2.Text = tostring(cfg.Default or values[1] or "")
+            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn2.Font = Enum.Font.SourceSansBold
+            btn2.TextSize = 11
+            btn2.Parent = row
 
-            local btn = create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 22),
-                BackgroundColor3 = config.Color or theme.Blue,
-                Text = tostring(config.Default or values[1] or "选择"),
-                TextColor3 = theme.Text,
-                Font = Enum.Font.SourceSansBold,
-                TextSize = 11,
-            }, row)
-            corner(btn, 4)
+            local control = { Value = cfg.Default or values[1] }
+            local index = 1
+            for i, v in ipairs(values) do if v == control.Value then index = i end end
 
-            local control = { Value = config.Default or values[1] }
-            local menu = nil
-
-            local function choose(v)
-                control.Value = v
-                btn.Text = tostring(v)
-                if menu then menu:Destroy(); menu = nil end
-                if config.Callback then config.Callback(v) end
-                if control.Callback then control.Callback(v) end
-            end
-
-            btn.MouseButton1Click:Connect(function()
-                if menu then menu:Destroy(); menu = nil; return end
-                local container = self.Main
-                menu = create("ScrollingFrame", {
-                    Size = UDim2.new(1, -12, 0, math.min(#values, 4) * 22),
-                    Position = UDim2.new(0, 6, 0, 200),
-                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-                    BorderSizePixel = 0,
-                    CanvasSize = UDim2.new(0, 0, 0, #values * 22),
-                    ScrollBarThickness = 3,
-                    ZIndex = 20,
-                }, container)
-                corner(menu, 4)
-
-                for i, v in ipairs(values) do
-                    local opt = create("TextButton", {
-                        Size = UDim2.new(1, 0, 0, 22),
-                        Position = UDim2.new(0, 0, 0, (i - 1) * 22),
-                        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-                        Text = tostring(v),
-                        TextColor3 = theme.Text,
-                        Font = Enum.Font.SourceSans,
-                        TextSize = 11,
-                        ZIndex = 21,
-                    }, menu)
-                    opt.MouseButton1Click:Connect(function() choose(v) end)
-                end
+            btn2.MouseButton1Click:Connect(function()
+                if #values == 0 then return end
+                index = index % #values + 1
+                control.Value = values[index]
+                btn2.Text = tostring(control.Value)
+                if cfg.Callback then cfg.Callback(control.Value) end
+                if control.Callback then control.Callback(control.Value) end
             end)
 
-            function control:SetValue(v) choose(v) end
+            function control:SetValue(v)
+                control.Value = v
+                btn2.Text = tostring(v)
+            end
             function control:OnChanged(cb) self.Callback = cb; return self end
             return control
         end
 
-        table.insert(self.Tabs, tab)
-        if #self.Tabs == 1 then
-            page.Visible = true
-            btn.BackgroundColor3 = theme.TabActive
-            btn.TextColor3 = theme.Text
-            self.CurrentTab = tab
+        function tab:AddLabel(text, color, height, textSize)
+            local row = newItem("Label", height or 16)
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 1, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = tostring(text)
+            lbl.TextColor3 = color or Color3.fromRGB(200, 200, 200)
+            lbl.Font = Enum.Font.SourceSans
+            lbl.TextSize = textSize or 10
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Parent = row
+            return lbl
+        end
+
+        table.insert(self.Pages, { Button = btn, Scroll = sf })
+        if #self.Pages == 1 then
+            sf.Visible = true
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            self.CurrentTabBtn = btn
         end
 
         return tab
-    end
-
-    function window:Destroy()
-        screenGui:Destroy()
     end
 
     table.insert(self.Windows, window)
