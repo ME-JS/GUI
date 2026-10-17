@@ -1,380 +1,366 @@
-local Library = {}
-Library.__index = Library
-
+local LibraryName = "Notification Library"
+local NotificationLibrary = {}
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local function getUIParent()
-    if gethui then return gethui() end
-    local ok, cg = pcall(function() return game:GetService("CoreGui") end)
-    if ok and cg then return cg end
-    return localPlayer:WaitForChild("PlayerGui")
+local library
+local templateFolder
+local canvas
+
+local BORDER_COLOR = Color3.new(0.10588236153125763, 0.16470588743686676, 0.20784315466880798)
+local GRADIENT_COLOR = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.new(0.121569, 0.121569, 0.121569)),
+    ColorSequenceKeypoint.new(1, Color3.new(0.152941, 0.152941, 0.152941)),
+})
+local GRADIENT_TRANSPARENCY = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 0),
+})
+local SHADOW_IMAGE = "rbxassetid://3523728077"
+
+local function buildTemplate(cfg)
+    local frame = Instance.new("Frame")
+    frame.Name = cfg.name
+    frame.Size = UDim2.new(1, 0, 0.0860000029206276, 0)
+    frame.Position = UDim2.new(0.5, 0, 0.10999999940395355, 0)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Rotation = 0
+    frame.BackgroundColor3 = Color3.new(1, 1, 1)
+    frame.BackgroundTransparency = 0
+    frame.BorderColor3 = BORDER_COLOR
+    frame.BorderSizePixel = 0
+    frame.BorderMode = Enum.BorderMode.Outline
+    frame.Visible = false
+    frame.Active = false
+    frame.ClipsDescendants = false
+    frame.LayoutOrder = 0
+    frame.ZIndex = 1
+    frame.Parent = templateFolder
+    pcall(function() frame.Transparency = 0 end)
+
+    local c = {}
+
+    local header = Instance.new("TextLabel")
+    header.Name = "Header"
+    header.Size = cfg.headerSize
+    header.Position = cfg.headerPosition or UDim2.new(0.5920000076293945, 0, 0.49399998784065247, 0)
+    header.AnchorPoint = Vector2.new(0.5, 0.5)
+    header.Rotation = 0
+    header.BackgroundColor3 = Color3.new(1, 1, 1)
+    header.BackgroundTransparency = 1
+    header.BorderColor3 = BORDER_COLOR
+    header.BorderSizePixel = 0
+    header.BorderMode = Enum.BorderMode.Outline
+    header.Visible = true
+    header.Active = false
+    header.ClipsDescendants = false
+    header.LayoutOrder = 0
+    header.ZIndex = 2
+    header.Text = cfg.headerText
+    header.TextColor3 = cfg.color
+    header.TextSize = 14
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.TextYAlignment = Enum.TextYAlignment.Top
+    header.TextScaled = true
+    header.TextWrapped = true
+    header.TextTruncate = Enum.TextTruncate.None
+    header.RichText = false
+    header.LineHeight = 1
+    header.Parent = frame
+    pcall(function() header.Transparency = 1 end)
+
+    local tsc = Instance.new("UITextSizeConstraint")
+    tsc.Name = "UITextSizeConstraint"
+    tsc.MaxTextSize = 14
+    tsc.MinTextSize = 1
+    tsc.Parent = header
+    c.Header = header
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Name = "UIGradient"
+    gradient.Rotation = 25
+    gradient.Enabled = true
+    gradient.Color = GRADIENT_COLOR
+    gradient.Transparency = GRADIENT_TRANSPARENCY
+    gradient.Offset = Vector2.new(0, 0)
+    gradient.Parent = frame
+    c.UIGradient = gradient
+
+    local decal = Instance.new("Frame")
+    decal.Name = "decal"
+    decal.Size = UDim2.new(1, 0, 1, 0)
+    decal.Position = UDim2.new(0, 0, 0, 0)
+    decal.AnchorPoint = Vector2.new(0, 0)
+    decal.Rotation = 0
+    decal.BackgroundColor3 = Color3.new(1, 1, 1)
+    decal.BackgroundTransparency = 1
+    decal.BorderColor3 = BORDER_COLOR
+    decal.BorderSizePixel = 0
+    decal.BorderMode = Enum.BorderMode.Outline
+    decal.Visible = true
+    decal.Active = false
+    decal.ClipsDescendants = false
+    decal.LayoutOrder = 0
+    decal.ZIndex = 0
+    decal.Parent = frame
+    pcall(function() decal.Transparency = 1 end)
+
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "background_shadow"
+    shadow.Size = UDim2.new(1.1280070543289185, 0, 1.8636363744735718, 0)
+    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadow.Rotation = 0
+    shadow.BackgroundColor3 = Color3.new(1, 1, 1)
+    shadow.BackgroundTransparency = 1
+    shadow.BorderColor3 = BORDER_COLOR
+    shadow.BorderSizePixel = 0
+    shadow.BorderMode = Enum.BorderMode.Outline
+    shadow.Visible = true
+    shadow.Active = false
+    shadow.ClipsDescendants = false
+    shadow.LayoutOrder = 0
+    shadow.ZIndex = 0
+    shadow.Image = SHADOW_IMAGE
+    shadow.ImageColor3 = Color3.new(0.0941176563501358, 0.0941176563501358, 0.0941176563501358)
+    shadow.ImageTransparency = 0.699999988079071
+    shadow.ImageRectOffset = Vector2.new(0, 0)
+    shadow.ImageRectSize = Vector2.new(0, 0)
+    shadow.ScaleType = Enum.ScaleType.Stretch
+    shadow.SliceCenter = Rect.new(0, 0, 0, 0)
+    shadow.SliceScale = 1
+    shadow.TileSize = UDim2.new(1, 0, 1, 0)
+    shadow.Parent = decal
+    pcall(function() shadow.Transparency = 1 end)
+
+    local sarc = Instance.new("UIAspectRatioConstraint")
+    sarc.Name = "UIAspectRatioConstraint"
+    sarc.AspectRatio = 2.6686997413635254
+    sarc.AspectType = Enum.AspectType.FitWithinMaxSize
+    sarc.DominantAxis = Enum.DominantAxis.Width
+    sarc.Parent = shadow
+
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "icon"
+    icon.Size = UDim2.new(0.09000000357627869, 0, 0.48500001430511475, 0)
+    icon.Position = cfg.iconPosition or UDim2.new(0.08956310898065567, 0, 0.48529744148254395, 0)
+    icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    icon.Rotation = 0
+    icon.BackgroundColor3 = Color3.new(0.6392157077789307, 0.6352941393852234, 0.6470588445663452)
+    icon.BackgroundTransparency = 1
+    icon.BorderColor3 = BORDER_COLOR
+    icon.BorderSizePixel = 0
+    icon.BorderMode = Enum.BorderMode.Outline
+    icon.Visible = true
+    icon.Active = false
+    icon.ClipsDescendants = false
+    icon.LayoutOrder = 0
+    icon.ZIndex = 1
+    icon.Image = cfg.iconImage
+    icon.ImageColor3 = cfg.color
+    icon.ImageTransparency = 0
+    icon.ImageRectOffset = Vector2.new(0, 0)
+    icon.ImageRectSize = Vector2.new(0, 0)
+    icon.ScaleType = Enum.ScaleType.Fit
+    icon.SliceCenter = Rect.new(0, 0, 0, 0)
+    icon.SliceScale = 1
+    icon.TileSize = UDim2.new(1, 0, 1, 0)
+    icon.Parent = decal
+    pcall(function() icon.Transparency = 1 end)
+
+    local iarc = Instance.new("UIAspectRatioConstraint")
+    iarc.Name = "UIAspectRatioConstraint"
+    iarc.AspectRatio = 1.0080000162124634
+    iarc.AspectType = Enum.AspectType.FitWithinMaxSize
+    iarc.DominantAxis = Enum.DominantAxis.Width
+    iarc.Parent = icon
+    c.decal = decal
+
+    local filler = Instance.new("Frame")
+    filler.Name = "Filler"
+    filler.Size = cfg.fillerSize or UDim2.new(0.011455993168056011, 0, 1, 0)
+    filler.Position = UDim2.new(1, 0, 0.5, 0)
+    filler.AnchorPoint = Vector2.new(1, 0.5)
+    filler.Rotation = 0
+    filler.BackgroundColor3 = cfg.color
+    filler.BackgroundTransparency = 0
+    filler.BorderColor3 = BORDER_COLOR
+    filler.BorderSizePixel = 0
+    filler.BorderMode = Enum.BorderMode.Outline
+    filler.Visible = true
+    filler.Active = false
+    filler.ClipsDescendants = false
+    filler.LayoutOrder = 0
+    filler.ZIndex = 3
+    filler.Parent = frame
+    pcall(function() filler.Transparency = 0 end)
+    c.Filler = filler
+
+    local bar = Instance.new("Frame")
+    bar.Name = "bar"
+    bar.Size = UDim2.new(0.009999999776482582, 0, 0.05000000074505806, 0)
+    bar.Position = UDim2.new(1, 0, 1, 0)
+    bar.AnchorPoint = Vector2.new(1, 0.5)
+    bar.Rotation = 0
+    bar.BackgroundColor3 = cfg.color
+    bar.BackgroundTransparency = 0
+    bar.BorderColor3 = BORDER_COLOR
+    bar.BorderSizePixel = 0
+    bar.BorderMode = Enum.BorderMode.Outline
+    bar.Visible = true
+    bar.Active = false
+    bar.ClipsDescendants = false
+    bar.LayoutOrder = 0
+    bar.ZIndex = 3
+    bar.Parent = frame
+    pcall(function() bar.Transparency = 0 end)
+    c.bar = bar
+
+    for _, name in ipairs(cfg.childOrder) do
+        local inst = c[name]
+        if inst then inst.Parent = frame end
+    end
+    return frame
 end
 
-function Library.new()
-    local self = setmetatable({}, Library)
-    self.Windows = {}
-    return self
+function NotificationLibrary:Load()
+    local old = playerGui:FindFirstChild(LibraryName)
+    if old then old:Destroy() end
+
+    library = Instance.new("ScreenGui")
+    library.Name = LibraryName
+    library.Enabled = true
+    library.ResetOnSpawn = false
+    library.IgnoreGuiInset = true
+    library.DisplayOrder = 0
+    library.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    library.Parent = playerGui
+
+    canvas = Instance.new("Frame")
+    canvas.Name = "list"
+    canvas.Size = UDim2.new(0.1776556819677353, 0, 0.8692670464515686, 0)
+    canvas.Position = UDim2.new(0.9107610583305359, 0, 0.5217076539993286, 0)
+    canvas.AnchorPoint = Vector2.new(0.5, 0.5)
+    canvas.Rotation = 0
+    canvas.BackgroundColor3 = Color3.new(1, 1, 1)
+    canvas.BackgroundTransparency = 1
+    canvas.BorderColor3 = BORDER_COLOR
+    canvas.BorderSizePixel = 0
+    canvas.BorderMode = Enum.BorderMode.Outline
+    canvas.Visible = true
+    canvas.Active = false
+    canvas.ClipsDescendants = false
+    canvas.LayoutOrder = 0
+    canvas.ZIndex = 1
+    canvas.Parent = library
+    pcall(function() canvas.Transparency = 1 end)
+
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Name = "UIListLayout"
+    uiListLayout.Padding = UDim.new(0, 5)
+    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    uiListLayout.FillDirection = Enum.FillDirection.Vertical
+    uiListLayout.Parent = canvas
+
+    templateFolder = Instance.new("Folder")
+    templateFolder.Name = "Templates"
+    templateFolder.Parent = library
+
+    buildTemplate({
+        name = "Warning",
+        color = Color3.new(0.9411764740943909, 0.686274528503418, 0.1764705926179886),
+        headerText = "This action is restricted!",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        iconImage = "rbxassetid://7072980286",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Success",
+        color = Color3.new(0.13725490868091583, 0.9411764740943909, 0.4313725531101227),
+        headerText = "You successfully retired money from your bank account",
+        headerSize = UDim2.new(0.7890306711196899, 0, 0.6476991176605225, 0),
+        iconImage = "http://www.roblox.com/asset/?id=6023426926",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Info",
+        color = Color3.new(0.8627451658248901, 0.8627451658248901, 0.8627451658248901),
+        headerText = "Welcome home mommy <3",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        headerPosition = UDim2.new(0.5921951532363892, 0, 0.49422186613082886, 0),
+        iconImage = "rbxassetid://7072717857",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Error",
+        color = Color3.new(1, 0.27450981736183167, 0.2862745225429535),
+        headerText = "An error accured!",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        iconImage = "rbxassetid://7072725342",
+        iconPosition = UDim2.new(0.09000000357627869, 0, 0.48500001430511475, 0),
+        fillerSize = UDim2.new(0.011455993168056011, 0, 0.9999999403953552, 0),
+        childOrder = {"Header", "UIGradient", "Filler", "decal", "bar"},
+    })
+
+    local innerScript = Instance.new("LocalScript")
+    innerScript.Name = "LocalScript"
+    innerScript.Enabled = false
+    innerScript.Parent = library
 end
 
-function Library:CreateWindow(config)
-    config = config or {}
-    local parent = config.Parent or getUIParent()
-    local name = config.Name or "UltimateGunAutomationGUI"
-
-    if parent:FindFirstChild(name) then
-        parent:FindFirstChild(name):Destroy()
+function NotificationLibrary:SendNotification(Mode, Text, Duration)
+    if not playerGui:FindFirstChild(LibraryName) then
+        NotificationLibrary:Load()
+    else
+        library = playerGui:FindFirstChild(LibraryName)
+        templateFolder = library.Templates
+        canvas = library.list
     end
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = name
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = parent
+    if templateFolder:FindFirstChild(Mode) then
+        task.spawn(function()
+            local success, err = pcall(function()
+                local Notification = templateFolder:WaitForChild(Mode):Clone()
+                local filler = Notification.Filler
+                local bar = Notification.bar
+                Notification.Header.Text = Text
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = config.Size or UDim2.new(0, 210, 0, 260)
-    mainFrame.Position = config.Position or UDim2.new(1, -230, 0, 20)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    mainFrame.BackgroundTransparency = 0
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Draggable = true
-    mainFrame.ClipsDescendants = true
-    mainFrame.Parent = screenGui
+                Notification.Visible = true
+                Notification.Parent = canvas
 
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 8)
-    mainCorner.Parent = mainFrame
+                Notification.Size = UDim2.new(0, 0, 0.087, 0)
+                filler.Size = UDim2.new(1, 0, 1, 0)
 
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 22)
-    titleBar.Position = UDim2.new(0, 0, 0, 0)
-    titleBar.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
+                local T1 = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                local T2 = TweenInfo.new(Duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local T3 = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 8)
-    titleCorner.Parent = titleBar
+                TweenService:Create(Notification, T1, {Size = UDim2.new(1, 0, 0.087, 0)}):Play()
+                task.wait(0.2)
+                TweenService:Create(filler, T3, {Size = UDim2.new(0.011, 0, 1, 0)}):Play()
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -45, 1, 0)
-    title.Position = UDim2.new(0, 4, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = config.Title or "枪械自动化全能辅助"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 11
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = titleBar
+                TweenService:Create(bar, T2, {Size = UDim2.new(1, 0, 0.05, 0)}):Play()
 
-    local minimizeBtn = Instance.new("TextButton")
-    minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
-    minimizeBtn.Position = UDim2.new(1, -42, 0, 1)
-    minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    minimizeBtn.Text = "-"
-    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    minimizeBtn.Parent = titleBar
+                task.wait(Duration)
 
-    local minimizeCorner = Instance.new("UICorner")
-    minimizeCorner.CornerRadius = UDim.new(0, 5)
-    minimizeCorner.Parent = minimizeBtn
-
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 20, 0, 20)
-    closeBtn.Position = UDim2.new(1, -21, 0, 1)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.Parent = titleBar
-
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 5)
-    closeCorner.Parent = closeBtn
-
-    local tabBar = Instance.new("ScrollingFrame")
-    tabBar.Size = UDim2.new(1, 0, 0, 21)
-    tabBar.Position = UDim2.new(0, 0, 0, 21)
-    tabBar.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
-    tabBar.BorderSizePixel = 0
-    tabBar.ScrollBarThickness = 2
-    tabBar.ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110)
-    tabBar.ScrollBarImageTransparency = 0.4
-    tabBar.ScrollingDirection = Enum.ScrollingDirection.X
-    tabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
-    tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-    tabBar.ElasticBehavior = Enum.ElasticBehavior.Never
-    tabBar.Parent = mainFrame
-
-    local tabListLayout = Instance.new("UIListLayout")
-    tabListLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    tabListLayout.Padding = UDim.new(0, 0)
-    tabListLayout.Parent = tabBar
-
-    local smallIcon = Instance.new("TextButton")
-    smallIcon.Size = UDim2.new(0, 32, 0, 32)
-    smallIcon.Position = UDim2.new(1, -45, 0, 20)
-    smallIcon.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    smallIcon.BackgroundTransparency = 0.2
-    smallIcon.Text = "Gun"
-    smallIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    smallIcon.Font = Enum.Font.SourceSansBold
-    smallIcon.TextSize = 10
-    smallIcon.BorderSizePixel = 0
-    smallIcon.Active = true
-    smallIcon.Draggable = true
-    smallIcon.Visible = false
-    smallIcon.Parent = screenGui
-
-    local iconCorner = Instance.new("UICorner")
-    iconCorner.CornerRadius = UDim.new(0, 6)
-    iconCorner.Parent = smallIcon
-
-    minimizeBtn.MouseButton1Click:Connect(function()
-        mainFrame.Visible = false
-        smallIcon.Visible = true
-    end)
-
-    smallIcon.MouseButton1Click:Connect(function()
-        mainFrame.Visible = true
-        smallIcon.Visible = false
-    end)
-
-    closeBtn.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-
-    local window = {
-        ScreenGui = screenGui,
-        Main = mainFrame,
-        TabBar = tabBar,
-        Pages = {},
-        CurrentTabBtn = nil,
-    }
-
-    local TAB_WIDTH = 70
-
-    function window:AddTab(tabName)
-        local index = #self.Pages + 1
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, TAB_WIDTH, 1, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        btn.Text = tostring(tabName)
-        btn.TextColor3 = Color3.fromRGB(180, 180, 180)
-        btn.Font = Enum.Font.SourceSansBold
-        btn.TextSize = 11
-        btn.BorderSizePixel = 0
-        btn.LayoutOrder = index
-        btn.Parent = self.TabBar
-
-        local sf = Instance.new("ScrollingFrame")
-        sf.Size = UDim2.new(1, 0, 1, -42)
-        sf.Position = UDim2.new(0, 0, 0, 42)
-        sf.BackgroundTransparency = 1
-        sf.BorderSizePixel = 0
-        sf.ScrollBarThickness = 3
-        sf.ScrollBarImageColor3 = Color3.fromRGB(110, 110, 110)
-        sf.CanvasSize = UDim2.new(0, 0, 0, 0)
-        sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        sf.Visible = false
-        sf.Parent = self.Main
-
-        local layout = Instance.new("UIListLayout")
-        layout.Padding = UDim.new(0, 2)
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Parent = sf
-
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            sf.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+                TweenService:Create(filler, T1, {Size = UDim2.new(1, 0, 1, 0)}):Play()
+                task.wait(0.25)
+                TweenService:Create(Notification, T3, {Size = UDim2.new(0, 0, 0.087, 0)}):Play()
+                task.wait(0.25)
+                Notification:Destroy()
+            end)
+            if not success then
+                warn("There was an error while trying to create an notification!")
+                warn(err)
+            end
         end)
-
-        btn.MouseButton1Click:Connect(function()
-            for _, p in ipairs(self.Pages) do p.Scroll.Visible = false end
-            sf.Visible = true
-            if self.CurrentTabBtn then
-                self.CurrentTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                self.CurrentTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-            end
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            self.CurrentTabBtn = btn
-
-            local targetX = (index - 1) * TAB_WIDTH
-            local maxScroll = math.max(0, #self.Pages * TAB_WIDTH - self.TabBar.AbsoluteSize.X)
-            self.TabBar.CanvasPosition = Vector2.new(math.clamp(targetX, 0, maxScroll), 0)
-        end)
-
-        local tab = {
-            Window = self,
-            Button = btn,
-            Scroll = sf,
-            Layout = layout,
-            NextOrder = 1,
-        }
-
-        local function newItem(name, height)
-            local f = Instance.new("Frame")
-            f.Name = name
-            f.Size = UDim2.new(1, -6, 0, height)
-            f.BackgroundTransparency = 1
-            f.LayoutOrder = tab.NextOrder
-            f.Parent = sf
-            tab.NextOrder = tab.NextOrder + 1
-            return f
-        end
-
-        function tab:AddToggle(id, cfg)
-            cfg = cfg or {}
-            local row = newItem(id, 22)
-            local btn2 = Instance.new("TextButton")
-            btn2.Size = UDim2.new(1, 0, 1, 0)
-            btn2.BackgroundColor3 = cfg.Default and (cfg.OnColor or Color3.fromRGB(40, 160, 40)) or (cfg.OffColor or Color3.fromRGB(70, 70, 70))
-            btn2.Text = (cfg.Text or id) .. ": " .. (cfg.Default and "开启" or "关闭")
-            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn2.Font = Enum.Font.SourceSansBold
-            btn2.TextSize = 11
-            btn2.Parent = row
-            local onColor = cfg.OnColor or Color3.fromRGB(40, 160, 40)
-            local offColor = cfg.OffColor or Color3.fromRGB(70, 70, 70)
-            local state = cfg.Default == true
-            local control = { Value = state, Callback = cfg.Callback }
-            btn2.MouseButton1Click:Connect(function()
-                state = not state
-                control.Value = state
-                btn2.BackgroundColor3 = state and onColor or offColor
-                btn2.Text = (cfg.Text or id) .. ": " .. (state and "开启" or "关闭")
-                if control.Callback then control.Callback(state) end
-            end)
-            function control:SetValue(v)
-                state = v == true
-                self.Value = state
-                btn2.BackgroundColor3 = state and onColor or offColor
-                btn2.Text = (cfg.Text or id) .. ": " .. (state and "开启" or "关闭")
-            end
-            function control:OnChanged(cb) self.Callback = cb; return self end
-            return control
-        end
-
-        function tab:AddButton(id, cfg)
-            cfg = cfg or {}
-            local row = newItem(id, 22)
-            local btn2 = Instance.new("TextButton")
-            btn2.Size = UDim2.new(1, 0, 1, 0)
-            btn2.BackgroundColor3 = cfg.Color or Color3.fromRGB(70, 70, 70)
-            btn2.Text = cfg.Text or id
-            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn2.Font = Enum.Font.SourceSansBold
-            btn2.TextSize = 11
-            btn2.Parent = row
-            local control = { Callback = cfg.Callback }
-            btn2.MouseButton1Click:Connect(function()
-                if cfg.Func then cfg.Func() end
-                if control.Callback then control.Callback() end
-            end)
-            function control:OnClick(cb) self.Callback = cb; return self end
-            return control
-        end
-
-        function tab:AddInput(id, cfg)
-            cfg = cfg or {}
-            local row = newItem(id, 22)
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.6, 0, 1, 0)
-            label.BackgroundTransparency = 1
-            label.Text = cfg.Text or id
-            label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            label.Font = Enum.Font.SourceSans
-            label.TextSize = 11
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = row
-
-            local box = Instance.new("TextBox")
-            box.Size = UDim2.new(0.4, 0, 1, 0)
-            box.Position = UDim2.new(0.6, 0, 0, 0)
-            box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            box.Text = cfg.Default or ""
-            box.PlaceholderText = cfg.Placeholder or ""
-            box.TextColor3 = Color3.fromRGB(255, 255, 255)
-            box.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
-            box.Font = Enum.Font.SourceSans
-            box.TextSize = 11
-            box.ClearTextOnFocus = false
-            box.Parent = row
-
-            local control = { Object = box, Callback = cfg.Callback }
-            box.FocusLost:Connect(function(enter)
-                if cfg.Callback then cfg.Callback(box.Text, enter) end
-                if control.Callback then control.Callback(box.Text, enter) end
-            end)
-            function control:GetValue() return box.Text end
-            function control:SetValue(v) box.Text = tostring(v or "") end
-            function control:OnChanged(cb) self.Callback = cb; return self end
-            return control
-        end
-
-        function tab:AddDropdown(id, cfg)
-            cfg = cfg or {}
-            local values = cfg.Values or {}
-            local row = newItem(id, 22)
-            local btn2 = Instance.new("TextButton")
-            btn2.Size = UDim2.new(1, 0, 1, 0)
-            btn2.BackgroundColor3 = cfg.Color or Color3.fromRGB(40, 90, 150)
-            btn2.Text = tostring(cfg.Default or values[1] or "")
-            btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn2.Font = Enum.Font.SourceSansBold
-            btn2.TextSize = 11
-            btn2.Parent = row
-
-            local control = { Value = cfg.Default or values[1] }
-            local index = 1
-            for i, v in ipairs(values) do if v == control.Value then index = i end end
-
-            btn2.MouseButton1Click:Connect(function()
-                if #values == 0 then return end
-                index = index % #values + 1
-                control.Value = values[index]
-                btn2.Text = tostring(control.Value)
-                if cfg.Callback then cfg.Callback(control.Value) end
-                if control.Callback then control.Callback(control.Value) end
-            end)
-
-            function control:SetValue(v)
-                control.Value = v
-                btn2.Text = tostring(v)
-            end
-            function control:OnChanged(cb) self.Callback = cb; return self end
-            return control
-        end
-
-        function tab:AddLabel(text, color, height, textSize)
-            local row = newItem("Label", height or 16)
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 1, 0)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = tostring(text)
-            lbl.TextColor3 = color or Color3.fromRGB(200, 200, 200)
-            lbl.Font = Enum.Font.SourceSans
-            lbl.TextSize = textSize or 10
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.Parent = row
-            return lbl
-        end
-
-        table.insert(self.Pages, { Button = btn, Scroll = sf })
-        if #self.Pages == 1 then
-            sf.Visible = true
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            self.CurrentTabBtn = btn
-        end
-
-        return tab
+    else
+        warn("Invalid theme applyed")
     end
-
-    table.insert(self.Windows, window)
-    return window
 end
 
-return Library
+return NotificationLibrary
