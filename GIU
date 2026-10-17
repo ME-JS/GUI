@@ -3,60 +3,167 @@ local NotificationLibrary = {}
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
+local Player = Players.LocalPlayer
+
 local GUI_NAME = "NotificationLibraryGui"
+
+local CARD_HEIGHT = 0.086
+local CARD_GAP = 5
+local SLIDE_DURATION = 0.25
+local EXPAND_DURATION = 0.2
+local FILLER_DURATION = 0.3
+local COLLAPSE_DURATION = 0.2
+local CLOSE_DELAY = 0.25
 
 local THEMES = {
     Success = {
         color = Color3.fromRGB(35, 240, 110),
-        icon = "rbxassetid://6023426926",
+        icon = "rbxassetid://6023426926"
     },
     Info = {
         color = Color3.fromRGB(220, 220, 220),
-        icon = "rbxassetid://7072717857",
+        icon = "rbxassetid://7072717857"
     },
     Warning = {
         color = Color3.fromRGB(240, 175, 45),
-        icon = "rbxassetid://7072980286",
+        icon = "rbxassetid://7072980286"
     },
     Error = {
         color = Color3.fromRGB(255, 70, 73),
-        icon = "rbxassetid://7072725342",
-    },
+        icon = "rbxassetid://7072725342"
+    }
 }
 
 local screenGui
 local listFrame
 local active = false
 local nextLayoutOrder = 0
+local notificationCards = {}
 
 local function create(className, properties, parent)
     local instance = Instance.new(className)
 
-    for key, value in pairs(properties) do
-        instance[key] = value
+    for property, value in pairs(properties or {}) do
+        instance[property] = value
     end
 
     instance.Parent = parent
     return instance
 end
 
-local function findNextOrder(container)
-    local highest = 0
+local function getPlayerGui()
+    return Player:WaitForChild("PlayerGui")
+end
 
-    for _, child in ipairs(container:GetChildren()) do
-        if child:IsA("GuiObject") then
-            highest = math.max(highest, child.LayoutOrder)
+local function getCards(targetList)
+    local cards = {}
+
+    for _, child in ipairs(targetList:GetChildren()) do
+        if child:IsA("Frame") and child:GetAttribute("IsNotificationCard") then
+            table.insert(cards, child)
         end
     end
 
-    return highest + 1
+    table.sort(cards, function(a, b)
+        return a.LayoutOrder < b.LayoutOrder
+    end)
+
+    return cards
+end
+
+local function getNextLayoutOrder(targetGui, targetList)
+    local maxOrder = targetGui:GetAttribute("NotificationNextOrder") or 0
+
+    for _, card in ipairs(getCards(targetList)) do
+        maxOrder = math.max(maxOrder, card.LayoutOrder)
+    end
+
+    maxOrder += 1
+    targetGui:SetAttribute("NotificationNextOrder", maxOrder)
+
+    return maxOrder
+end
+
+local function tween(instance, tweenInfo, properties)
+    if not instance or not instance.Parent then
+        return nil
+    end
+
+    local animation = TweenService:Create(instance, tweenInfo, properties)
+    animation:Play()
+    return animation
+end
+
+local function waitTween(animation)
+    if animation then
+        animation.Completed:Wait()
+    end
+end
+
+local function updatePositions(targetList, animatedCard)
+    if not targetList or not targetList.Parent then
+        return
+    end
+
+    local cards = getCards(targetList)
+    local yOffset = 0
+
+    for _, card in ipairs(cards) do
+        if card.Parent then
+            local targetPosition = UDim2.new(0, 0, 0, yOffset)
+            local targetSize = UDim2.new(1, 0, 0, card:GetAttribute("PixelHeight") or 70)
+
+            if card == animatedCard then
+                card.Position = targetPosition
+                card.Size = targetSize
+            else
+                tween(
+                    card,
+                    TweenInfo.new(
+                        SLIDE_DURATION,
+                        Enum.EasingStyle.Quart,
+                        Enum.EasingDirection.Out
+                    ),
+                    {
+                        Position = targetPosition,
+                        Size = targetSize
+                    }
+                )
+            end
+
+            yOffset += (card:GetAttribute("PixelHeight") or 70) + CARD_GAP
+        end
+    end
+end
+
+local function cleanupIfEmpty(targetGui, targetList)
+    task.defer(function()
+        task.wait()
+
+        if not targetGui or not targetList then
+            return
+        end
+
+        if not targetGui.Parent or not targetList.Parent then
+            return
+        end
+
+        if #getCards(targetList) == 0 then
+            targetGui:Destroy()
+
+            if screenGui == targetGui then
+                screenGui = nil
+                listFrame = nil
+                active = false
+                nextLayoutOrder = 0
+                table.clear(notificationCards)
+            end
+        end
+    end)
 end
 
 local function makeNotificationGui()
-    local player = Players.LocalPlayer
-    assert(player, "NotificationLibrary must be loaded from a LocalScript")
-
-    local playerGui = player:WaitForChild("PlayerGui")
+    local playerGui = getPlayerGui()
     local existing = playerGui:FindFirstChild(GUI_NAME)
 
     if existing and not existing:IsA("ScreenGui") then
@@ -65,92 +172,83 @@ local function makeNotificationGui()
     end
 
     if existing then
-        screenGui = existing
-    else
-        screenGui = create("ScreenGui", {
-            Name = GUI_NAME,
-            ResetOnSpawn = false,
-            IgnoreGuiInset = true,
-            DisplayOrder = 50,
-            ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        }, playerGui)
-    end
+        local existingList = existing:FindFirstChild("NotificationList")
 
-    listFrame = screenGui:FindFirstChild("list")
-
-    if not listFrame or not listFrame:IsA("Frame") then
-        if listFrame then
-            listFrame:Destroy()
+        if existingList and existingList:IsA("Frame") then
+            screenGui = existing
+            listFrame = existingList
+            active = true
+            return screenGui, listFrame
         end
 
-        listFrame = create("Frame", {
-            Name = "list",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.91076, 0, 0.52171, 0),
-            Size = UDim2.new(0.17766, 0, 0.86927, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-        }, screenGui)
+        existing:Destroy()
     end
 
-    local layout = listFrame:FindFirstChildOfClass("UIListLayout")
+    local gui = create("ScreenGui", {
+        Name = GUI_NAME,
+        DisplayOrder = 0,
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets,
+        SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
+    }, playerGui)
 
-    if not layout then
-        layout = create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            VerticalAlignment = Enum.VerticalAlignment.Top,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 5),
-        }, listFrame)
-    else
-        layout.FillDirection = Enum.FillDirection.Vertical
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-        layout.VerticalAlignment = Enum.VerticalAlignment.Top
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, 5)
-    end
+    gui:SetAttribute("NotificationNextOrder", 0)
 
-    nextLayoutOrder = findNextOrder(listFrame) - 1
+    local list = create("Frame", {
+        Name = "NotificationList",
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.91076, 0, 0.087, 0),
+        Size = UDim2.new(0.17766, 0, 0.82, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = false
+    }, gui)
+
+    screenGui = gui
+    listFrame = list
+    active = true
+
+    return gui, list
 end
 
-local function createCard(mode, text)
+local function createCard(targetGui, targetList, mode, message)
     local theme = THEMES[mode]
+    local layoutOrder = getNextLayoutOrder(targetGui, targetList)
 
-    nextLayoutOrder = math.max(
-        nextLayoutOrder + 1,
-        findNextOrder(listFrame)
-    )
+    local listWidth = targetList.AbsoluteSize.X
+    local cardHeight = math.max(40, math.floor(targetList.AbsoluteSize.Y * CARD_HEIGHT))
+
+    if cardHeight <= 40 then
+        cardHeight = 70
+    end
 
     local card = create("Frame", {
-        Name = mode,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.11, 0),
-        Size = UDim2.new(0, 0, 0.087, 0),
-        BackgroundColor3 = Color3.fromRGB(31, 31, 31),
-        BackgroundTransparency = 0,
+        Name = "NotificationCard",
+        AnchorPoint = Vector2.new(0, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 0, 0, cardHeight),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
+        ZIndex = 1,
         ClipsDescendants = false,
-        Visible = true,
-        LayoutOrder = nextLayoutOrder,
-    }, listFrame)
+        LayoutOrder = layoutOrder
+    }, targetList)
+
+    card:SetAttribute("IsNotificationCard", true)
+    card:SetAttribute("PixelHeight", cardHeight)
 
     create("UIGradient", {
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(
-                0,
-                Color3.fromRGB(31, 31, 31)
-            ),
-            ColorSequenceKeypoint.new(
-                1,
-                Color3.fromRGB(39, 39, 39)
-            ),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(31, 31, 31)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(39, 39, 39))
         }),
-        Rotation = 25,
+        Rotation = 25
     }, card)
 
     local shadow = create("ImageLabel", {
-        Name = "background_shadow",
+        Name = "Shadow",
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(1.12801, 0, 1.86364, 0),
@@ -159,57 +257,47 @@ local function createCard(mode, text)
         ImageColor3 = Color3.fromRGB(24, 24, 24),
         ImageTransparency = 0.7,
         ScaleType = Enum.ScaleType.Stretch,
-        ZIndex = 0,
+        ZIndex = 0
     }, card)
 
     create("UIAspectRatioConstraint", {
-        AspectRatio = 2.6686997,
-        DominantAxis = Enum.DominantAxis.Width,
-        AspectType = Enum.AspectType.FitWithinMaxSize,
+        AspectRatio = 2.6686997
     }, shadow)
 
     local icon = create("ImageLabel", {
-        Name = "icon",
+        Name = "Icon",
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.08956, 0, 0.4853, 0),
         Size = UDim2.new(0.09, 0, 0.485, 0),
         BackgroundTransparency = 1,
         Image = theme.icon,
-        ImageColor3 = theme.color,
         ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 1,
+        ZIndex = 1
     }, card)
 
     create("UIAspectRatioConstraint", {
-        AspectRatio = 1.008,
-        DominantAxis = Enum.DominantAxis.Width,
-        AspectType = Enum.AspectType.FitWithinMaxSize,
+        AspectRatio = 1.008
     }, icon)
 
     local header = create("TextLabel", {
         Name = "Header",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.592, 0, 0.494, 0),
-        Size = UDim2.new(0.789, 0, 0.648, 0),
+        Position = UDim2.new(0.16, 0, 0.12, 0),
+        Size = UDim2.new(0.79, 0, 0.65, 0),
         BackgroundTransparency = 1,
-        Text = tostring(text),
+        Text = message,
         TextColor3 = theme.color,
-        TextTransparency = 0,
-        TextStrokeTransparency = 1,
         TextSize = 14,
         TextScaled = true,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
+        TextYAlignment = Enum.TextYAlignment.Center,
         Font = Enum.Font.GothamBold,
-        RichText = false,
-        LineHeight = 1,
-        ZIndex = 2,
+        ZIndex = 2
     }, card)
 
     create("UITextSizeConstraint", {
         MinTextSize = 1,
-        MaxTextSize = 14,
+        MaxTextSize = 14
     }, header)
 
     local filler = create("Frame", {
@@ -219,137 +307,95 @@ local function createCard(mode, text)
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = theme.color,
         BorderSizePixel = 0,
-        ZIndex = 3,
+        ZIndex = 3
     }, card)
 
     local bar = create("Frame", {
-        Name = "bar",
+        Name = "DurationBar",
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, 0, 1, 0),
         Size = UDim2.new(0.01, 0, 0.05, 0),
         BackgroundColor3 = theme.color,
         BorderSizePixel = 0,
-        ZIndex = 3,
+        ZIndex = 3
     }, card)
+
+    table.insert(notificationCards, card)
 
     return card, filler, bar
 end
 
-local function cleanupIfEmpty(targetGui, targetList)
-    if not targetGui or not targetGui.Parent then
-        return
-    end
-
-    if not targetList or not targetList.Parent then
-        return
-    end
-
-    for _, child in ipairs(targetList:GetChildren()) do
-        if child:IsA("GuiObject") then
-            return
-        end
-    end
-
-    targetGui:Destroy()
-
-    if screenGui == targetGui then
-        screenGui = nil
-        listFrame = nil
-        active = false
-        nextLayoutOrder = 0
-    end
-end
-
 function NotificationLibrary:Load()
-    if active
-        and screenGui
-        and screenGui.Parent
-        and listFrame
-        and listFrame.Parent then
+    if active and screenGui and screenGui.Parent and listFrame and listFrame.Parent then
         return self
     end
 
     makeNotificationGui()
-    active = true
-
     return self
 end
 
-function NotificationLibrary:SendNotification(mode, text, duration)
-    if type(mode) ~= "string" or not THEMES[mode] then
-        warn("NotificationLibrary: invalid mode")
-        return
+function NotificationLibrary:SendNotification(mode, message, duration)
+    if not THEMES[mode] then
+        mode = "Info"
     end
 
-    text = tostring(text)
-
-    if type(duration) ~= "number"
-        or duration ~= duration
-        or duration == math.huge
-        or duration == -math.huge then
-        duration = 3
-    end
-
+    message = tostring(message or "")
+    duration = tonumber(duration) or 3
     duration = math.clamp(duration, 0.1, 120)
-
-    if not active
-        or not screenGui
-        or not screenGui.Parent
-        or not listFrame
-        or not listFrame.Parent then
-        self:Load()
-    end
 
     local targetGui = screenGui
     local targetList = listFrame
 
+    if not active
+        or not targetGui
+        or not targetGui.Parent
+        or not targetList
+        or not targetList.Parent then
+        targetGui, targetList = makeNotificationGui()
+    end
+
+    local card, filler, bar = createCard(
+        targetGui,
+        targetList,
+        mode,
+        message
+    )
+
+    updatePositions(targetList, card)
+
     task.spawn(function()
-        local card
-
-        local ok, err = pcall(function()
-            if not targetGui.Parent or not targetList.Parent then
-                return
-            end
-
-            screenGui = targetGui
-            listFrame = targetList
-
-            local filler
-            local bar
-
-            card, filler, bar = createCard(mode, text)
-
-            TweenService:Create(
+        local success, err = pcall(function()
+            local expand = tween(
                 card,
                 TweenInfo.new(
-                    0.2,
+                    EXPAND_DURATION,
                     Enum.EasingStyle.Quad,
                     Enum.EasingDirection.Out
                 ),
                 {
-                    Size = UDim2.new(1, 0, 0.087, 0),
+                    Size = UDim2.new(1, 0, 0, card:GetAttribute("PixelHeight"))
                 }
-            ):Play()
+            )
 
-            task.wait(0.2)
+            waitTween(expand)
 
             if not card.Parent then
                 return
             end
 
-            TweenService:Create(
+            local fillerShrink = tween(
                 filler,
                 TweenInfo.new(
-                    0.3,
+                    FILLER_DURATION,
                     Enum.EasingStyle.Quad,
                     Enum.EasingDirection.Out
                 ),
                 {
-                    Size = UDim2.new(0.011, 0, 1, 0),
+                    Size = UDim2.new(0.01146, 0, 1, 0)
                 }
-            ):Play()
+            )
 
-            TweenService:Create(
+            local barGrow = tween(
                 bar,
                 TweenInfo.new(
                     duration,
@@ -357,73 +403,96 @@ function NotificationLibrary:SendNotification(mode, text, duration)
                     Enum.EasingDirection.Out
                 ),
                 {
-                    Size = UDim2.new(1, 0, 0.05, 0),
+                    Size = UDim2.new(1, 0, 0.05, 0)
                 }
-            ):Play()
+            )
 
-            task.wait(duration)
+            waitTween(fillerShrink)
+            waitTween(barGrow)
 
             if not card.Parent then
                 return
             end
 
-            TweenService:Create(
+            local fillerExpand = tween(
                 filler,
                 TweenInfo.new(
-                    0.2,
+                    EXPAND_DURATION,
                     Enum.EasingStyle.Quad,
                     Enum.EasingDirection.Out
                 ),
                 {
-                    Size = UDim2.new(1, 0, 1, 0),
+                    Size = UDim2.new(1, 0, 1, 0)
                 }
-            ):Play()
+            )
 
-            task.wait(0.25)
+            waitTween(fillerExpand)
+            task.wait(CLOSE_DELAY)
 
-            if card.Parent then
-                TweenService:Create(
-                    card,
-                    TweenInfo.new(
-                        0.2,
-                        Enum.EasingStyle.Quad,
-                        Enum.EasingDirection.Out
-                    ),
-                    {
-                        Size = UDim2.new(0, 0, 0.087, 0),
-                    }
-                ):Play()
-
-                task.wait(0.2)
+            if not card.Parent then
+                return
             end
+
+            local collapse = tween(
+                card,
+                TweenInfo.new(
+                    COLLAPSE_DURATION,
+                    Enum.EasingStyle.Quad,
+                    Enum.EasingDirection.In
+                ),
+                {
+                    Size = UDim2.new(0, 0, 0, card:GetAttribute("PixelHeight"))
+                }
+            )
+
+            waitTween(collapse)
 
             if card.Parent then
                 card:Destroy()
             end
+
+            for i = #notificationCards, 1, -1 do
+                if notificationCards[i] == card then
+                    table.remove(notificationCards, i)
+                end
+            end
+
+            updatePositions(targetList)
+            cleanupIfEmpty(targetGui, targetList)
         end)
 
-        if not ok then
+        if not success then
+            warn("NotificationLibrary:", err)
+
             if card and card.Parent then
                 card:Destroy()
             end
 
-            warn("NotificationLibrary error: " .. tostring(err))
-        end
+            for i = #notificationCards, 1, -1 do
+                if notificationCards[i] == card then
+                    table.remove(notificationCards, i)
+                end
+            end
 
-        cleanupIfEmpty(targetGui, targetList)
+            updatePositions(targetList)
+            cleanupIfEmpty(targetGui, targetList)
+        end
     end)
+
+    return card
 end
 
 function NotificationLibrary:Destroy()
     active = false
 
-    if screenGui then
+    if screenGui and screenGui.Parent then
         screenGui:Destroy()
     end
 
     screenGui = nil
     listFrame = nil
     nextLayoutOrder = 0
+    table.clear(notificationCards)
 end
 
 return NotificationLibrary
