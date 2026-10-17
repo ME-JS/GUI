@@ -1,178 +1,366 @@
 local LibraryName = "Notification Library"
 local NotificationLibrary = {}
-
 local TweenService = game:GetService("TweenService")
-local CoreGui = cloneref(game:GetService("CoreGui"))
+local Players = game:GetService("Players")
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 local library
 local templateFolder
 local canvas
 
-function NotificationLibrary:Load()
-    local existing = CoreGui:FindFirstChild(LibraryName)
+local BORDER_COLOR = Color3.new(0.10588236153125763, 0.16470588743686676, 0.20784315466880798)
+local GRADIENT_COLOR = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.new(0.121569, 0.121569, 0.121569)),
+    ColorSequenceKeypoint.new(1, Color3.new(0.152941, 0.152941, 0.152941)),
+})
+local GRADIENT_TRANSPARENCY = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 0),
+})
+local SHADOW_IMAGE = "rbxassetid://3523728077"
 
-    if existing then
-        library = existing
-    else
-        library = game:GetObjects("rbxassetid://15133757123")[1]
-        library.Name = LibraryName
-        library.Parent = CoreGui
+local function buildTemplate(cfg)
+    local frame = Instance.new("Frame")
+    frame.Name = cfg.name
+    frame.Size = UDim2.new(1, 0, 0.0860000029206276, 0)
+    frame.Position = UDim2.new(0.5, 0, 0.10999999940395355, 0)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Rotation = 0
+    frame.BackgroundColor3 = Color3.new(1, 1, 1)
+    frame.BackgroundTransparency = 0
+    frame.BorderColor3 = BORDER_COLOR
+    frame.BorderSizePixel = 0
+    frame.BorderMode = Enum.BorderMode.Outline
+    frame.Visible = false
+    frame.Active = false
+    frame.ClipsDescendants = false
+    frame.LayoutOrder = 0
+    frame.ZIndex = 1
+    frame.Parent = templateFolder
+    pcall(function() frame.Transparency = 0 end)
+
+    local c = {}
+
+    local header = Instance.new("TextLabel")
+    header.Name = "Header"
+    header.Size = cfg.headerSize
+    header.Position = cfg.headerPosition or UDim2.new(0.5920000076293945, 0, 0.49399998784065247, 0)
+    header.AnchorPoint = Vector2.new(0.5, 0.5)
+    header.Rotation = 0
+    header.BackgroundColor3 = Color3.new(1, 1, 1)
+    header.BackgroundTransparency = 1
+    header.BorderColor3 = BORDER_COLOR
+    header.BorderSizePixel = 0
+    header.BorderMode = Enum.BorderMode.Outline
+    header.Visible = true
+    header.Active = false
+    header.ClipsDescendants = false
+    header.LayoutOrder = 0
+    header.ZIndex = 2
+    header.Text = cfg.headerText
+    header.TextColor3 = cfg.color
+    header.TextSize = 14
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.TextYAlignment = Enum.TextYAlignment.Top
+    header.TextScaled = true
+    header.TextWrapped = true
+    header.TextTruncate = Enum.TextTruncate.None
+    header.RichText = false
+    header.LineHeight = 1
+    header.Parent = frame
+    pcall(function() header.Transparency = 1 end)
+
+    local tsc = Instance.new("UITextSizeConstraint")
+    tsc.Name = "UITextSizeConstraint"
+    tsc.MaxTextSize = 14
+    tsc.MinTextSize = 1
+    tsc.Parent = header
+    c.Header = header
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Name = "UIGradient"
+    gradient.Rotation = 25
+    gradient.Enabled = true
+    gradient.Color = GRADIENT_COLOR
+    gradient.Transparency = GRADIENT_TRANSPARENCY
+    gradient.Offset = Vector2.new(0, 0)
+    gradient.Parent = frame
+    c.UIGradient = gradient
+
+    local decal = Instance.new("Frame")
+    decal.Name = "decal"
+    decal.Size = UDim2.new(1, 0, 1, 0)
+    decal.Position = UDim2.new(0, 0, 0, 0)
+    decal.AnchorPoint = Vector2.new(0, 0)
+    decal.Rotation = 0
+    decal.BackgroundColor3 = Color3.new(1, 1, 1)
+    decal.BackgroundTransparency = 1
+    decal.BorderColor3 = BORDER_COLOR
+    decal.BorderSizePixel = 0
+    decal.BorderMode = Enum.BorderMode.Outline
+    decal.Visible = true
+    decal.Active = false
+    decal.ClipsDescendants = false
+    decal.LayoutOrder = 0
+    decal.ZIndex = 0
+    decal.Parent = frame
+    pcall(function() decal.Transparency = 1 end)
+
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "background_shadow"
+    shadow.Size = UDim2.new(1.1280070543289185, 0, 1.8636363744735718, 0)
+    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadow.Rotation = 0
+    shadow.BackgroundColor3 = Color3.new(1, 1, 1)
+    shadow.BackgroundTransparency = 1
+    shadow.BorderColor3 = BORDER_COLOR
+    shadow.BorderSizePixel = 0
+    shadow.BorderMode = Enum.BorderMode.Outline
+    shadow.Visible = true
+    shadow.Active = false
+    shadow.ClipsDescendants = false
+    shadow.LayoutOrder = 0
+    shadow.ZIndex = 0
+    shadow.Image = SHADOW_IMAGE
+    shadow.ImageColor3 = Color3.new(0.0941176563501358, 0.0941176563501358, 0.0941176563501358)
+    shadow.ImageTransparency = 0.699999988079071
+    shadow.ImageRectOffset = Vector2.new(0, 0)
+    shadow.ImageRectSize = Vector2.new(0, 0)
+    shadow.ScaleType = Enum.ScaleType.Stretch
+    shadow.SliceCenter = Rect.new(0, 0, 0, 0)
+    shadow.SliceScale = 1
+    shadow.TileSize = UDim2.new(1, 0, 1, 0)
+    shadow.Parent = decal
+    pcall(function() shadow.Transparency = 1 end)
+
+    local sarc = Instance.new("UIAspectRatioConstraint")
+    sarc.Name = "UIAspectRatioConstraint"
+    sarc.AspectRatio = 2.6686997413635254
+    sarc.AspectType = Enum.AspectType.FitWithinMaxSize
+    sarc.DominantAxis = Enum.DominantAxis.Width
+    sarc.Parent = shadow
+
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "icon"
+    icon.Size = UDim2.new(0.09000000357627869, 0, 0.48500001430511475, 0)
+    icon.Position = cfg.iconPosition or UDim2.new(0.08956310898065567, 0, 0.48529744148254395, 0)
+    icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    icon.Rotation = 0
+    icon.BackgroundColor3 = Color3.new(0.6392157077789307, 0.6352941393852234, 0.6470588445663452)
+    icon.BackgroundTransparency = 1
+    icon.BorderColor3 = BORDER_COLOR
+    icon.BorderSizePixel = 0
+    icon.BorderMode = Enum.BorderMode.Outline
+    icon.Visible = true
+    icon.Active = false
+    icon.ClipsDescendants = false
+    icon.LayoutOrder = 0
+    icon.ZIndex = 1
+    icon.Image = cfg.iconImage
+    icon.ImageColor3 = cfg.color
+    icon.ImageTransparency = 0
+    icon.ImageRectOffset = Vector2.new(0, 0)
+    icon.ImageRectSize = Vector2.new(0, 0)
+    icon.ScaleType = Enum.ScaleType.Fit
+    icon.SliceCenter = Rect.new(0, 0, 0, 0)
+    icon.SliceScale = 1
+    icon.TileSize = UDim2.new(1, 0, 1, 0)
+    icon.Parent = decal
+    pcall(function() icon.Transparency = 1 end)
+
+    local iarc = Instance.new("UIAspectRatioConstraint")
+    iarc.Name = "UIAspectRatioConstraint"
+    iarc.AspectRatio = 1.0080000162124634
+    iarc.AspectType = Enum.AspectType.FitWithinMaxSize
+    iarc.DominantAxis = Enum.DominantAxis.Width
+    iarc.Parent = icon
+    c.decal = decal
+
+    local filler = Instance.new("Frame")
+    filler.Name = "Filler"
+    filler.Size = cfg.fillerSize or UDim2.new(0.011455993168056011, 0, 1, 0)
+    filler.Position = UDim2.new(1, 0, 0.5, 0)
+    filler.AnchorPoint = Vector2.new(1, 0.5)
+    filler.Rotation = 0
+    filler.BackgroundColor3 = cfg.color
+    filler.BackgroundTransparency = 0
+    filler.BorderColor3 = BORDER_COLOR
+    filler.BorderSizePixel = 0
+    filler.BorderMode = Enum.BorderMode.Outline
+    filler.Visible = true
+    filler.Active = false
+    filler.ClipsDescendants = false
+    filler.LayoutOrder = 0
+    filler.ZIndex = 3
+    filler.Parent = frame
+    pcall(function() filler.Transparency = 0 end)
+    c.Filler = filler
+
+    local bar = Instance.new("Frame")
+    bar.Name = "bar"
+    bar.Size = UDim2.new(0.009999999776482582, 0, 0.05000000074505806, 0)
+    bar.Position = UDim2.new(1, 0, 1, 0)
+    bar.AnchorPoint = Vector2.new(1, 0.5)
+    bar.Rotation = 0
+    bar.BackgroundColor3 = cfg.color
+    bar.BackgroundTransparency = 0
+    bar.BorderColor3 = BORDER_COLOR
+    bar.BorderSizePixel = 0
+    bar.BorderMode = Enum.BorderMode.Outline
+    bar.Visible = true
+    bar.Active = false
+    bar.ClipsDescendants = false
+    bar.LayoutOrder = 0
+    bar.ZIndex = 3
+    bar.Parent = frame
+    pcall(function() bar.Transparency = 0 end)
+    c.bar = bar
+
+    for _, name in ipairs(cfg.childOrder) do
+        local inst = c[name]
+        if inst then inst.Parent = frame end
     end
+    return frame
+end
 
-    templateFolder = library:WaitForChild("Templates")
-    canvas = library:WaitForChild("list")
+function NotificationLibrary:Load()
+    local old = playerGui:FindFirstChild(LibraryName)
+    if old then old:Destroy() end
+
+    library = Instance.new("ScreenGui")
+    library.Name = LibraryName
+    library.Enabled = true
+    library.ResetOnSpawn = false
+    library.IgnoreGuiInset = true
+    library.DisplayOrder = 0
+    library.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    library.Parent = playerGui
+
+    canvas = Instance.new("Frame")
+    canvas.Name = "list"
+    canvas.Size = UDim2.new(0.1776556819677353, 0, 0.8692670464515686, 0)
+    canvas.Position = UDim2.new(0.9107610583305359, 0, 0.5217076539993286, 0)
+    canvas.AnchorPoint = Vector2.new(0.5, 0.5)
+    canvas.Rotation = 0
+    canvas.BackgroundColor3 = Color3.new(1, 1, 1)
+    canvas.BackgroundTransparency = 1
+    canvas.BorderColor3 = BORDER_COLOR
+    canvas.BorderSizePixel = 0
+    canvas.BorderMode = Enum.BorderMode.Outline
+    canvas.Visible = true
+    canvas.Active = false
+    canvas.ClipsDescendants = false
+    canvas.LayoutOrder = 0
+    canvas.ZIndex = 1
+    canvas.Parent = library
+    pcall(function() canvas.Transparency = 1 end)
+
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Name = "UIListLayout"
+    uiListLayout.Padding = UDim.new(0, 5)
+    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    uiListLayout.FillDirection = Enum.FillDirection.Vertical
+    uiListLayout.Parent = canvas
+
+    templateFolder = Instance.new("Folder")
+    templateFolder.Name = "Templates"
+    templateFolder.Parent = library
+
+    buildTemplate({
+        name = "Warning",
+        color = Color3.new(0.9411764740943909, 0.686274528503418, 0.1764705926179886),
+        headerText = "This action is restricted!",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        iconImage = "rbxassetid://7072980286",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Success",
+        color = Color3.new(0.13725490868091583, 0.9411764740943909, 0.4313725531101227),
+        headerText = "You successfully retired money from your bank account",
+        headerSize = UDim2.new(0.7890306711196899, 0, 0.6476991176605225, 0),
+        iconImage = "http://www.roblox.com/asset/?id=6023426926",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Info",
+        color = Color3.new(0.8627451658248901, 0.8627451658248901, 0.8627451658248901),
+        headerText = "Welcome home mommy <3",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        headerPosition = UDim2.new(0.5921951532363892, 0, 0.49422186613082886, 0),
+        iconImage = "rbxassetid://7072717857",
+        childOrder = {"Header", "UIGradient", "decal", "Filler", "bar"},
+    })
+    buildTemplate({
+        name = "Error",
+        color = Color3.new(1, 0.27450981736183167, 0.2862745225429535),
+        headerText = "An error accured!",
+        headerSize = UDim2.new(0.7889999747276306, 0, 0.6480000019073486, 0),
+        iconImage = "rbxassetid://7072725342",
+        iconPosition = UDim2.new(0.09000000357627869, 0, 0.48500001430511475, 0),
+        fillerSize = UDim2.new(0.011455993168056011, 0, 0.9999999403953552, 0),
+        childOrder = {"Header", "UIGradient", "Filler", "decal", "bar"},
+    })
+
+    local innerScript = Instance.new("LocalScript")
+    innerScript.Name = "LocalScript"
+    innerScript.Enabled = false
+    innerScript.Parent = library
 end
 
 function NotificationLibrary:SendNotification(Mode, Text, Duration)
-    Duration = math.max(tonumber(Duration) or 3, 0.1)
-
-    if not library or not library.Parent then
-        self:Load()
+    if not playerGui:FindFirstChild(LibraryName) then
+        NotificationLibrary:Load()
     else
-        templateFolder = library:WaitForChild("Templates")
-        canvas = library:WaitForChild("list")
+        library = playerGui:FindFirstChild(LibraryName)
+        templateFolder = library.Templates
+        canvas = library.list
     end
 
-    local template = templateFolder:FindFirstChild(Mode)
+    if templateFolder:FindFirstChild(Mode) then
+        task.spawn(function()
+            local success, err = pcall(function()
+                local Notification = templateFolder:WaitForChild(Mode):Clone()
+                local filler = Notification.Filler
+                local bar = Notification.bar
+                Notification.Header.Text = Text
 
-    if not template then
-        warn("Invalid theme applied:", tostring(Mode))
-        return
-    end
+                Notification.Visible = true
+                Notification.Parent = canvas
 
-    task.spawn(function()
-        local success, err = pcall(function()
-            local notification = template:Clone()
-            local filler = notification:WaitForChild("Filler")
-            local bar = notification:WaitForChild("bar")
-            local header = notification:WaitForChild("Header")
+                Notification.Size = UDim2.new(0, 0, 0.087, 0)
+                filler.Size = UDim2.new(1, 0, 1, 0)
 
-            local originalSize = notification.Size
-            local originalPosition = notification.Position
+                local T1 = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                local T2 = TweenInfo.new(Duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local T3 = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-            header.Text = tostring(Text or "")
-            notification.Visible = true
-            notification.Parent = canvas
-            notification.ClipsDescendants = true
+                TweenService:Create(Notification, T1, {Size = UDim2.new(1, 0, 0.087, 0)}):Play()
+                task.wait(0.2)
+                TweenService:Create(filler, T3, {Size = UDim2.new(0.011, 0, 1, 0)}):Play()
 
-            notification.Size = UDim2.new(
-                0, 0,
-                originalSize.Y.Scale,
-                originalSize.Y.Offset
-            )
+                TweenService:Create(bar, T2, {Size = UDim2.new(1, 0, 0.05, 0)}):Play()
 
-            filler.AnchorPoint = Vector2.new(0, 0)
-            filler.Position = UDim2.fromScale(0, 0)
-            filler.Size = UDim2.fromScale(0, 1)
-            filler.Visible = true
+                task.wait(Duration)
 
-            local maxZIndex = notification.ZIndex
-
-            for _, object in ipairs(notification:GetDescendants()) do
-                if object:IsA("GuiObject") and object ~= filler then
-                    maxZIndex = math.max(maxZIndex, object.ZIndex)
-                end
-            end
-
-            filler.ZIndex = maxZIndex + 1
-
-            local enterTween = TweenService:Create(
-                notification,
-                TweenInfo.new(
-                    0.2,
-                    Enum.EasingStyle.Quad,
-                    Enum.EasingDirection.Out
-                ),
-                {Size = originalSize}
-            )
-
-            enterTween:Play()
-            enterTween.Completed:Wait()
-
-            if not notification.Parent then
-                return
-            end
-
-            local barTween = TweenService:Create(
-                bar,
-                TweenInfo.new(Duration, Enum.EasingStyle.Linear),
-                {
-                    Size = UDim2.new(
-                        1, 0,
-                        bar.Size.Y.Scale,
-                        bar.Size.Y.Offset
-                    )
-                }
-            )
-
-            barTween:Play()
-            task.wait(Duration)
-
-            if not notification.Parent then
-                return
-            end
-
-            header.Visible = false
-            bar.Visible = false
-
-            for _, object in ipairs(notification:GetDescendants()) do
-                if object:IsA("TextLabel")
-                    or object:IsA("TextButton")
-                    or object:IsA("TextBox") then
-                    object.Visible = false
-                end
-            end
-
-            filler.Visible = true
-            filler.Position = UDim2.fromScale(0, 0)
-            filler.Size = UDim2.fromScale(0, 1)
-
-            local fillTween = TweenService:Create(
-                filler,
-                TweenInfo.new(
-                    0.45,
-                    Enum.EasingStyle.Quad,
-                    Enum.EasingDirection.InOut
-                ),
-                {Size = UDim2.fromScale(1, 1)}
-            )
-
-            fillTween:Play()
-            fillTween.Completed:Wait()
-
-            if not notification.Parent then
-                return
-            end
-
-            local exitTween = TweenService:Create(
-                notification,
-                TweenInfo.new(
-                    0.45,
-                    Enum.EasingStyle.Quart,
-                    Enum.EasingDirection.In
-                ),
-                {
-                    Position = UDim2.new(
-                        originalPosition.X.Scale + 1,
-                        originalPosition.X.Offset + 400,
-                        originalPosition.Y.Scale,
-                        originalPosition.Y.Offset
-                    )
-                }
-            )
-
-            exitTween:Play()
-            exitTween.Completed:Wait()
-
-            if notification.Parent then
-                notification:Destroy()
+                TweenService:Create(filler, T1, {Size = UDim2.new(1, 0, 1, 0)}):Play()
+                task.wait(0.25)
+                TweenService:Create(Notification, T3, {Size = UDim2.new(0, 0, 0.087, 0)}):Play()
+                task.wait(0.25)
+                Notification:Destroy()
+            end)
+            if not success then
+                warn("There was an error while trying to create an notification!")
+                warn(err)
             end
         end)
-
-        if not success then
-            warn("Notification animation error:", err)
-        end
-    end)
+    else
+        warn("Invalid theme applyed")
+    end
 end
 
 return NotificationLibrary
