@@ -53,7 +53,12 @@ local function makeNotificationGui()
     local playerGui = player:WaitForChild("PlayerGui")
     local existing = playerGui:FindFirstChild("NotificationLibraryGui")
 
-    if existing and existing:IsA("ScreenGui") then
+    if existing and not existing:IsA("ScreenGui") then
+        existing:Destroy()
+        existing = nil
+    end
+
+    if existing then
         screenGui = existing
         listFrame = screenGui:FindFirstChild("list")
         if not listFrame then
@@ -102,12 +107,12 @@ local function makeNotificationGui()
         layout.Padding = UDim.new(0, 5)
     end
 
-    nextLayoutOrder = findNextOrder(listFrame)
+    nextLayoutOrder = findNextOrder(listFrame) - 1
 end
 
 local function createCard(mode, text)
     local theme = THEMES[mode]
-    nextLayoutOrder = math.max(nextLayoutOrder + 1, findNextOrder(listFrame))
+    nextLayoutOrder += 1
 
     local card = create("Frame", {
         Name = mode,
@@ -185,7 +190,7 @@ local function createCard(mode, text)
         Font = Enum.Font.GothamBold,
         RichText = false,
         LineHeight = 1,
-        ZIndex = 3,
+        ZIndex = 2,
     }, card)
 
     create("UITextSizeConstraint", {
@@ -200,7 +205,7 @@ local function createCard(mode, text)
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = theme.color,
         BorderSizePixel = 0,
-        ZIndex = 4,
+        ZIndex = 3,
     }, card)
 
     local bar = create("Frame", {
@@ -210,7 +215,7 @@ local function createCard(mode, text)
         Size = UDim2.new(0.01, 0, 0.05, 0),
         BackgroundColor3 = theme.color,
         BorderSizePixel = 0,
-        ZIndex = 5,
+        ZIndex = 3,
     }, card)
 
     return card, filler, bar
